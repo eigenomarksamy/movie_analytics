@@ -138,12 +138,12 @@ class Summary:
             f"min duration: {convert_duration_to_str(min_duration * 60)} -- {file_min_dur}",
             f"oldest date: {oldest_date} -- {file_oldest_date}",
             f"newest date: {newest_date} -- {file_newest_date}",
-            f"time span of files: {newest_date - oldest_date}",
+            # f"time span of files: {newest_date - oldest_date}",
             f"avg duration: {convert_duration_to_str(avg_duration * 60)}",
             f"avg size: {convert_size_mb_to_str(avg_size)}",
             f"avg processing time (s): {avg_time_taken}",
             f"avg processing speed (GB/s): {total_size_gb / total_time_taken}",
             f"total processing time: {convert_duration_to_str(total_time_taken)}",
             f"encoding(s): {encoding_dict}",
-            "---------------\n"
+            "\n----------------------------------------------------------------------------\n"
         ]

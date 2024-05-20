@@ -14,6 +14,7 @@ class CacheRW:
         self.csv_raw_file = self.report_dir + 'files_raw.csv'
         self.summary_file = self.report_dir + 'summary.txt'
         self.full_summary_file = self.report_dir + 'full_summary.txt'
+        self.tmp_summary_file = self.report_dir + 'tmp_summary.txt'
         self.file_lists_dir = self.proj_cache_dir + 'working_file_lists/'
         self.file_list_full_file = self.file_lists_dir + 'full_file_list.txt'
         self.file_list_processed_file = self.file_lists_dir + 'processed_file_list.txt'
@@ -40,6 +41,12 @@ class CacheRW:
     def write_full_summary_file(self, summary_lines: list[str]) -> None:
         try:
             write_file(self.full_summary_file, summary_lines)
+        except Exception as e:
+            raise RuntimeError(f"Exception happened in writing: {e}")
+
+    def write_tmp_summary_file(self, summary_lines: list[str]) -> None:
+        try:
+            write_file(self.tmp_summary_file, summary_lines)
         except Exception as e:
             raise RuntimeError(f"Exception happened in writing: {e}")
 

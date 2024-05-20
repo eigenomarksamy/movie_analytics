@@ -17,17 +17,20 @@ from analytics.utils import (get_total_size_gb,
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Create movie info')
     parser.add_argument('--dest', type=str,
-                        help='Input directory path',
-                        dest='input_directory')
+                        dest='input_directory',
+                        help='Input directory path')
     parser.add_argument('--proj', type=str, default="",
-                        help='Input project name',
-                        dest='proj_name')
+                        dest='proj_name',
+                        help='Input project name')
     parser.add_argument('--proc-speed', type=float, default=0.1,
-                        help='Processing speed (GB/s)',
-                        dest='proc_speed')
+                        dest='proc_speed',
+                        help='Processing speed (GB/s)')
     parser.add_argument('--exec-time', type=float, default=60,
-                        help='Allowed time to execute (s)',
-                        dest='max_exec_time')
+                        dest='max_exec_time',
+                        help='Allowed time to execute (s)')
+    parser.add_argument('--gen-tmp-sum', action='store_true',
+                        dest='gen_tmp_sum',
+                        help='Generate temporary summary')
     return parser.parse_args()
 
 def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
@@ -40,7 +43,8 @@ def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
     if dest_dir[-1] != separator:
         dest_dir += separator
     max_size_batch = args.proc_speed * args.max_exec_time
-    return dest_dir, proj_name, separator, max_size_batch, args.proc_speed
+    return dest_dir, proj_name, separator, max_size_batch, \
+            args.proc_speed, args.gen_tmp_sum
 
 def display_progress(total_count: int,
                      processed_count: int,
@@ -56,8 +60,9 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
                          proc_list_size: float, destination: str,
                          project: str, allowed_exec_time: float,
                          out_dir_csv: str, out_dir_csv_raw: str,
-                         out_dir_summary_wip: str, out_dir_summary_final: str,
-                         out_dir_list_full: str, out_dir_list_proc: str) -> None:
+                         out_dir_summary_wip: str, out_dir_summary_tmp: str,
+                         out_dir_summary_final: str, out_dir_list_full: str,
+                         out_dir_list_proc: str) -> None:
     print("Execution initiated.\n"
           "Initialization done.")
     nums = {"Number of total files": total_list_count,
@@ -65,7 +70,8 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
             "Number of remaining files": rem_list_count,
             "Number of batch files": batch_files_count}
     expected = {"Expected time": convert_duration_to_str(exp_proc_time),
-                "Expected remaining list count": f'{rem_list_size - batch_size:.2f} GB',
+                "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
+                "Expected remaining list count": f'{rem_list_count - batch_files_count}',
                 "Expected progress": f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
                 "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size)}
     sizes = {"Total size": f'{total_list_size:.2f} GB',
@@ -80,6 +86,7 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
     output = {"Files csv": out_dir_csv,
               "Files csv (raw)": out_dir_csv_raw,
               "Summary (wip)": out_dir_summary_wip,
+              "Temporary summary": out_dir_summary_tmp,
               "Final summary": out_dir_summary_final,
               "Full list": out_dir_list_full,
               "Processed list": out_dir_list_proc}
@@ -96,7 +103,8 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
     print("------------------------------------------------------------------------")
 
 def main(args: argparse.Namespace) -> int:
-    dest_dir, proj_name, separator, max_size_batch, proc_speed = process_args(args)
+    dest_dir, proj_name, separator, max_size_batch, \
+        proc_speed, gen_tmp_sum = process_args(args)
     cache_obj = CacheRW(proj_name)
     dir_mgr_obj = DirectoryMgr(dest_dir, cache_obj)
     summary_obj = Summary()
@@ -109,6 +117,11 @@ def main(args: argparse.Namespace) -> int:
         raw_csv_data = cache_obj.read_raw_csv_file()
         full_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_full_summary_file(full_summary)
+        return 0
+    elif gen_tmp_sum:
+        raw_csv_data = cache_obj.read_raw_csv_file()
+        tmp_summary = summary_obj.generate_full_summary(raw_csv_data)
+        cache_obj.write_tmp_summary_file(tmp_summary)
         return 0
     working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list, max_size_batch)
     actual_processed = []
@@ -130,6 +143,7 @@ def main(args: argparse.Namespace) -> int:
                          out_dir_csv=cache_obj.csv_clean_file,
                          out_dir_csv_raw=cache_obj.csv_raw_file,
                          out_dir_summary_wip=cache_obj.summary_file,
+                         out_dir_summary_tmp=cache_obj.tmp_summary_file,
                          out_dir_summary_final=cache_obj.full_summary_file,
                          out_dir_list_full=cache_obj.file_list_full_file,
                          out_dir_list_proc=cache_obj.file_list_processed_file)
