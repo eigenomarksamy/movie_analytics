@@ -50,7 +50,12 @@ def display_progress(total_count: int,
                      processed_count: int,
                      total_size: float,
                      processed_size: float) -> None:
-    print(f"Progress: {processed_count}/{total_count} -- "
+    progress_bar = ['-'] * total_count
+    for i in range(processed_count):
+        progress_bar[i] = '+'
+    print(f"{''.join(progress_bar)}\t\t"
+          f"{processed_count}/{total_count}\t\t"
+          f"{processed_size:.2f}/{total_size:.2f} GB\t\t"
           f"{(processed_size*100)/total_size:.2f}%")
 
 def display_initial_info(exp_proc_time: float, batch_files_count: int,
@@ -63,44 +68,36 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
                          out_dir_summary_wip: str, out_dir_summary_tmp: str,
                          out_dir_summary_final: str, out_dir_list_full: str,
                          out_dir_list_proc: str) -> None:
-    print("Execution initiated.\n"
-          "Initialization done.")
-    nums = {"Number of total files": total_list_count,
-            "Number of processed files": total_list_count - rem_list_count,
-            "Number of remaining files": rem_list_count,
-            "Number of batch files": batch_files_count}
-    expected = {"Expected time": convert_duration_to_str(exp_proc_time),
-                "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
-                "Expected remaining list count": f'{rem_list_count - batch_files_count}',
-                "Expected progress": f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
-                "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size)}
-    sizes = {"Total size": f'{total_list_size:.2f} GB',
-             "Batch size": convert_size_mb_to_str(batch_size * 1024),
-             "Remaining list size (incl batch)": f'{rem_list_size:.2f} GB',
-             "Processed list size": f'{proc_list_size:.2f} GB',
-             "Already processed": f'{proc_list_size * 100 / total_list_size:.2f}%'}
-    args = {"Destination": destination,
-            "Project": project,
-            "Processing speed": proc_speed,
-            "Allowed execution time": allowed_exec_time}
-    output = {"Files csv": out_dir_csv,
-              "Files csv (raw)": out_dir_csv_raw,
-              "Summary (wip)": out_dir_summary_wip,
-              "Temporary summary": out_dir_summary_tmp,
-              "Final summary": out_dir_summary_final,
-              "Full list": out_dir_list_full,
-              "Processed list": out_dir_list_proc}
-    print("Arguments")
-    print(tabulate(args.items(), tablefmt='pretty'))
-    print("Output directories")
-    print(tabulate(output.items(), tablefmt='pretty'))
-    print("Numbers")
-    print(tabulate(nums.items(), tablefmt='pretty'))
-    print("Expectations")
-    print(tabulate(expected.items(), tablefmt='pretty'))
-    print("Sizes")
-    print(tabulate(sizes.items(), tablefmt='pretty'))
-    print("------------------------------------------------------------------------")
+    print("Initialization done.")
+    table = {
+        "Destination": destination,
+        "Project": project,
+        "Files csv": out_dir_csv,
+        "Files csv (raw)": out_dir_csv_raw,
+        "Summary (wip)": out_dir_summary_wip,
+        "Temporary summary": out_dir_summary_tmp,
+        "Final summary": out_dir_summary_final,
+        "Full list": out_dir_list_full,
+        "Processed list": out_dir_list_proc,
+        "Processing speed": proc_speed,
+        "Allowed execution time": allowed_exec_time,
+        "Number of total files": total_list_count,
+        "Number of processed files": total_list_count - rem_list_count,
+        "Number of remaining files": rem_list_count,
+        "Number of batch files": batch_files_count,
+        "Total size": f'{total_list_size:.2f} GB',
+        "Batch size": convert_size_mb_to_str(batch_size * 1024),
+        "Remaining list size (incl batch)": f'{rem_list_size:.2f} GB',
+        "Processed list size": f'{proc_list_size:.2f} GB',
+        "Already processed": f'{proc_list_size * 100 / total_list_size:.2f}%',
+        "Expected progress": f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
+        "Expected time": convert_duration_to_str(exp_proc_time),
+        "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
+        "Expected remaining list count": f'{rem_list_count - batch_files_count}',
+        "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size),
+        }
+    print(tabulate(table.items(), tablefmt="pretty", stralign="left", headers=["Information", "Value"]))
+    print("Execution initiated.")
 
 def main(args: argparse.Namespace) -> int:
     dest_dir, proj_name, separator, max_size_batch, \
@@ -117,11 +114,13 @@ def main(args: argparse.Namespace) -> int:
         raw_csv_data = cache_obj.read_raw_csv_file()
         full_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_full_summary_file(full_summary)
+        print("Full summary has been generated.")
         return 0
     elif gen_tmp_sum:
         raw_csv_data = cache_obj.read_raw_csv_file()
         tmp_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_tmp_summary_file(tmp_summary)
+        print("Partial summary has been generated.")
         return 0
     working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list, max_size_batch)
     actual_processed = []
@@ -147,16 +146,16 @@ def main(args: argparse.Namespace) -> int:
                          out_dir_summary_final=cache_obj.full_summary_file,
                          out_dir_list_full=cache_obj.file_list_full_file,
                          out_dir_list_proc=cache_obj.file_list_processed_file)
+    print("Progress")
     for file in working_list:
         mp4_file = get_video_info(f'{file}')
         summary_obj.step(file.split(separator)[-1], mp4_file._encoding,
-                        mp4_file._size / (1024 ** 2),
-                        mp4_file._duration / 60,
-                        mp4_file._creation_time,
-                        mp4_file._time_taken)
+                         mp4_file._size / (1024 ** 2),
+                         mp4_file._duration / 60,
+                         mp4_file._creation_time,
+                         mp4_file._time_taken)
         display_progress(working_list_count, summary_obj.count_files,
-                        total_size_gb,
-                        summary_obj.total_size_gb)
+                         total_size_gb, summary_obj.total_size_gb)
         csv_dict.append({
             "file": file.split(separator)[-1],
             "encoding": mp4_file._encoding,
@@ -183,6 +182,7 @@ def main(args: argparse.Namespace) -> int:
     cache_obj.write_summary_file(summary)
     cache_obj.write_csv_clean_file(csv_dict)
     cache_obj.write_csv_raw_file(csv_raw)
+    print("All output has been generated.")
     return 0
 
 if __name__ == '__main__':
