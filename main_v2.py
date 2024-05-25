@@ -1,6 +1,8 @@
 import os
+import gc
 import sys
 import math
+import time
 import argparse
 from typing import Tuple
 from tabulate import tabulate
@@ -28,9 +30,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--exec-time', type=float, default=60,
                         dest='max_exec_time',
                         help='Allowed time to execute (s)')
-    parser.add_argument('--gen-tmp-sum', action='store_true',
-                        dest='gen_tmp_sum',
-                        help='Generate temporary summary')
+    parser.add_argument('--quite', '-q', action='store_true',
+                        dest='quite',
+                        help='Hide detailed output')
     return parser.parse_args()
 
 def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
@@ -42,9 +44,10 @@ def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
         proj_name = dest_dir.replace(separator, '_')
     if dest_dir[-1] != separator:
         dest_dir += separator
-    max_size_batch = args.proc_speed * args.max_exec_time
+    max_size_batch = args.proc_speed * (args.max_exec_time - 10)
+    verbose = not args.quite
     return dest_dir, proj_name, separator, max_size_batch, \
-            args.proc_speed, args.gen_tmp_sum
+            args.proc_speed, verbose
 
 def display_progress(total_count: int,
                      processed_count: int,
@@ -94,15 +97,16 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
         "Expected time": convert_duration_to_str(exp_proc_time),
         "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
         "Expected remaining list count": f'{rem_list_count - batch_files_count}',
-        "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size),
+        "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size)
         }
     print(tabulate(table.items(), tablefmt="pretty", stralign="left", headers=["Information", "Value"]))
     print("Execution initiated.")
 
 def main(args: argparse.Namespace) -> int:
+    start_time = time.time()
     dest_dir, proj_name, separator, max_size_batch, \
-        proc_speed, gen_tmp_sum = process_args(args)
-    cache_obj = CacheRW(proj_name)
+        proc_speed, verbose = process_args(args)
+    cache_obj = CacheRW(proj_name, verbose)
     dir_mgr_obj = DirectoryMgr(dest_dir, cache_obj)
     summary_obj = Summary()
     total_list = dir_mgr_obj.get_list_of_files()
@@ -114,13 +118,6 @@ def main(args: argparse.Namespace) -> int:
         raw_csv_data = cache_obj.read_raw_csv_file()
         full_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_full_summary_file(full_summary)
-        print("Full summary has been generated.")
-        return 0
-    elif gen_tmp_sum:
-        raw_csv_data = cache_obj.read_raw_csv_file()
-        tmp_summary = summary_obj.generate_full_summary(raw_csv_data)
-        cache_obj.write_tmp_summary_file(tmp_summary)
-        print("Partial summary has been generated.")
         return 0
     working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list, max_size_batch)
     actual_processed = []
@@ -129,60 +126,75 @@ def main(args: argparse.Namespace) -> int:
     expected_total_processing_time = total_size_gb / proc_speed
     csv_dict = []
     csv_raw = []
-    display_initial_info(exp_proc_time=expected_total_processing_time,
-                         batch_files_count=working_list_count,
-                         batch_size=total_size_gb, proc_speed=proc_speed,
-                         rem_list_count=len(remaining_list),
-                         total_list_count=len(total_list),
-                         total_list_size=total_list_size,
-                         rem_list_size=remaining_list_size,
-                         proc_list_size=processed_list_size,
-                         destination=dest_dir, project=proj_name,
-                         allowed_exec_time=(max_size_batch / proc_speed),
-                         out_dir_csv=cache_obj.csv_clean_file,
-                         out_dir_csv_raw=cache_obj.csv_raw_file,
-                         out_dir_summary_wip=cache_obj.summary_file,
-                         out_dir_summary_tmp=cache_obj.tmp_summary_file,
-                         out_dir_summary_final=cache_obj.full_summary_file,
-                         out_dir_list_full=cache_obj.file_list_full_file,
-                         out_dir_list_proc=cache_obj.file_list_processed_file)
-    print("Progress")
+    if verbose:
+        display_initial_info(exp_proc_time=expected_total_processing_time,
+                            batch_files_count=working_list_count,
+                            batch_size=total_size_gb, proc_speed=proc_speed,
+                            rem_list_count=len(remaining_list),
+                            total_list_count=len(total_list),
+                            total_list_size=total_list_size,
+                            rem_list_size=remaining_list_size,
+                            proc_list_size=processed_list_size,
+                            destination=dest_dir, project=proj_name,
+                            allowed_exec_time=(max_size_batch / proc_speed),
+                            out_dir_csv=cache_obj.csv_clean_file,
+                            out_dir_csv_raw=cache_obj.csv_raw_file,
+                            out_dir_summary_wip=cache_obj.summary_file,
+                            out_dir_summary_tmp=cache_obj.tmp_summary_file,
+                            out_dir_summary_final=cache_obj.full_summary_file,
+                            out_dir_list_full=cache_obj.file_list_full_file,
+                            out_dir_list_proc=cache_obj.file_list_processed_file)
+        print("Progress")
     for file in working_list:
-        mp4_file = get_video_info(f'{file}')
-        summary_obj.step(file.split(separator)[-1], mp4_file._encoding,
-                         mp4_file._size / (1024 ** 2),
-                         mp4_file._duration / 60,
-                         mp4_file._creation_time,
-                         mp4_file._time_taken)
-        display_progress(working_list_count, summary_obj.count_files,
-                         total_size_gb, summary_obj.total_size_gb)
-        csv_dict.append({
-            "file": file.split(separator)[-1],
-            "encoding": mp4_file._encoding,
-            "size": convert_size_to_str(mp4_file._size),
-            "duration": convert_duration_to_str(mp4_file._duration),
-            "creation date": mp4_file._creation_time,
-            "resolution": convert_resolution_to_str(mp4_file._resolution.width,
-                                                    mp4_file._resolution.height),
-            "processing time": mp4_file._time_taken
-        })
-        csv_raw.append({
-            "file": file.split(separator)[-1],
-            "encoding": mp4_file._encoding,
-            "size (MB)": mp4_file._size / (1024 ** 2),
-            "duration (mins)": mp4_file._duration / 60,
-            "creation date": mp4_file._creation_time,
-            "resolution (h)": mp4_file._resolution.height,
-            "processing time": mp4_file._time_taken
-        })
-        actual_processed.append(file)
+        try:
+            mp4_file = get_video_info(f'{file}')
+            summary_obj.step(file.split(separator)[-1], mp4_file['encoding'],
+                            mp4_file['size'] / (1024 ** 2),
+                            mp4_file['duration'] / 60,
+                            mp4_file['creation_time'],
+                            mp4_file['time_taken'])
+            if verbose:
+                display_progress(working_list_count, summary_obj.count_files,
+                                total_size_gb, summary_obj.total_size_gb)
+            csv_dict.append({
+                "file": file.split(separator)[-1],
+                "encoding": mp4_file['encoding'],
+                "size": convert_size_to_str(mp4_file['size']),
+                "duration": convert_duration_to_str(mp4_file['duration']),
+                "creation date": mp4_file['creation_time'],
+                "resolution": convert_resolution_to_str(mp4_file['resolution_width'],
+                                                        mp4_file['resolution_height']),
+                "processing time": mp4_file['time_taken']
+            })
+            csv_raw.append({
+                "file": file.split(separator)[-1],
+                "encoding": mp4_file['encoding'],
+                "size (MB)": mp4_file['size'] / (1024 ** 2),
+                "duration (mins)": mp4_file['duration'] / 60,
+                "creation date": mp4_file['creation_time'],
+                "resolution (h)": mp4_file['resolution_height'],
+                "processing time": mp4_file['time_taken']
+            })
+            actual_processed.append(file)
+        except Exception as e:
+            print(f"Error processing file {file}: {e}")
+        finally:
+            gc.collect()
     summary_obj.finalize()
     summary = summary_obj.get_summary_lines()
     cache_obj.write_processed_files_list(actual_processed)
     cache_obj.write_summary_file(summary)
     cache_obj.write_csv_clean_file(csv_dict)
     cache_obj.write_csv_raw_file(csv_raw)
-    print("All output has been generated.")
+    raw_csv_data = cache_obj.read_raw_csv_file()
+    tmp_summary = summary_obj.generate_full_summary(raw_csv_data)
+    cache_obj.write_tmp_summary_file(tmp_summary)
+    if verbose:
+        print("All output files were generated.")
+    end_time = time.time()
+    total_time = end_time - start_time
+    if verbose:
+        print("Total execution time:\t" + convert_duration_to_str(total_time))
     return 0
 
 if __name__ == '__main__':

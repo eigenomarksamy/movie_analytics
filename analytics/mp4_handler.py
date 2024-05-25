@@ -1,4 +1,5 @@
 import os
+import gc
 import time
 import datetime
 from moviepy.editor import VideoFileClip
@@ -65,7 +66,7 @@ def get_encoding(file_path: os.PathLike,
             continue
     raise RuntimeError("Can't obtain encoding")
 
-def get_video_info(file_path: os.PathLike) -> MP4File:
+def get_video_info(file_path: os.PathLike) -> dict:
     try:
         encoding = get_encoding(file_path)
     except RuntimeError as e:
@@ -73,6 +74,18 @@ def get_video_info(file_path: os.PathLike) -> MP4File:
     mp4_file = MP4File(file_path, encoding)
     try:
         mp4_file.compute_video_info()
+        ret_dict = {
+            'encoding': mp4_file._encoding,
+            'size': mp4_file._size,
+            'duration': mp4_file._duration,
+            'creation_time': mp4_file._creation_time,
+            'time_taken': mp4_file._time_taken,
+            'resolution_width': mp4_file._resolution.width,
+            'resolution_height': mp4_file._resolution.height
+        }
     except Exception as e:
         raise RuntimeError(f"Error occurred in getting video info: {e}")
-    return mp4_file
+    finally:
+        del mp4_file
+        gc.collect()
+    return ret_dict
