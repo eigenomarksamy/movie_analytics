@@ -53,8 +53,8 @@ def display_progress(total_count: int,
                      processed_count: int,
                      total_size: float,
                      processed_size: float) -> None:
-    progress_bar = ['-'] * total_count
-    for i in range(processed_count):
+    progress_bar = ['-'] * 100
+    for i in range(int(processed_count * 100 / total_count)):
         progress_bar[i] = '+'
     print(f"{''.join(progress_bar)}\t\t"
           f"{processed_count}/{total_count}\t\t"
@@ -219,7 +219,9 @@ def main(args: argparse.Namespace) -> int:
                  "Finalization":
                     f'{finalization_time_taken:.2f} secs',
                  "Total execution":
-                    convert_duration_to_str(total_time)}
+                    convert_duration_to_str(total_time),
+                 "Total execution per item":
+                    convert_duration_to_str(total_time / len(step_times))}
         print(tabulate(table.items(), tablefmt="pretty", stralign="left",
                        headers=["Timing", "Value"]))
         print("End of execution.")
