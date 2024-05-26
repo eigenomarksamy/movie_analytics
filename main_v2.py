@@ -93,17 +93,22 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
         "Remaining list size (incl batch)": f'{rem_list_size:.2f} GB',
         "Processed list size": f'{proc_list_size:.2f} GB',
         "Already processed": f'{proc_list_size * 100 / total_list_size:.2f}%',
-        "Expected progress": f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
+        "Expected progress":
+            f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
         "Expected time": convert_duration_to_str(exp_proc_time),
         "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
-        "Expected remaining list count": f'{rem_list_count - batch_files_count}',
-        "Expected remaining runs (at this proc speed)": math.ceil(rem_list_size / batch_size)
+        "Expected remaining list count":
+            f'{rem_list_count - batch_files_count}',
+        "Expected remaining runs (at this proc speed)":
+            math.ceil(rem_list_size / batch_size)
         }
-    print(tabulate(table.items(), tablefmt="pretty", stralign="left", headers=["Information", "Value"]))
+    print(tabulate(table.items(), tablefmt="pretty", stralign="left",
+                   headers=["Information", "Value"]))
     print("Execution initiated.")
 
 def main(args: argparse.Namespace) -> int:
     start_time = time.time()
+    initialization_time_start = time.time()
     dest_dir, proj_name, separator, max_size_batch, \
         proc_speed, verbose = process_args(args)
     cache_obj = CacheRW(proj_name, verbose)
@@ -119,7 +124,8 @@ def main(args: argparse.Namespace) -> int:
         full_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_full_summary_file(full_summary)
         return 0
-    working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list, max_size_batch)
+    working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list,
+                                                            max_size_batch)
     actual_processed = []
     total_size_gb = get_total_size_gb(working_list)
     working_list_count = len(working_list)
@@ -145,7 +151,11 @@ def main(args: argparse.Namespace) -> int:
                             out_dir_list_full=cache_obj.file_list_full_file,
                             out_dir_list_proc=cache_obj.file_list_processed_file)
         print("Progress")
+    initialization_time_end = time.time()
+    initialization_time_taken = initialization_time_end - initialization_time_start
+    step_times = []
     for file in working_list:
+        step_time_start = time.time()
         try:
             mp4_file = get_video_info(f'{file}')
             summary_obj.step(file.split(separator)[-1], mp4_file['encoding'],
@@ -180,6 +190,10 @@ def main(args: argparse.Namespace) -> int:
             print(f"Error processing file {file}: {e}")
         finally:
             gc.collect()
+        step_time_end = time.time()
+        step_times.append(step_time_end - step_time_start)
+    step_time_avg = sum(step_times) / len(step_times)
+    finalization_time_start = time.time()
     summary_obj.finalize()
     summary = summary_obj.get_summary_lines()
     cache_obj.write_processed_files_list(actual_processed)
@@ -191,10 +205,24 @@ def main(args: argparse.Namespace) -> int:
     cache_obj.write_tmp_summary_file(tmp_summary)
     if verbose:
         print("All output files were generated.")
+    finalization_time_end = time.time()
+    finalization_time_taken = finalization_time_end - finalization_time_start
     end_time = time.time()
     total_time = end_time - start_time
     if verbose:
-        print("Total execution time:\t" + convert_duration_to_str(total_time))
+        table = {"Initialization":
+                    f'{initialization_time_taken:.2f} secs',
+                 "Steps total / steps length":
+                    f'{convert_duration_to_str(sum(step_times))} / {len(step_times)}',
+                 "Step average":
+                    convert_duration_to_str(step_time_avg),
+                 "Finalization":
+                    f'{finalization_time_taken:.2f} secs',
+                 "Total execution":
+                    convert_duration_to_str(total_time)}
+        print(tabulate(table.items(), tablefmt="pretty", stralign="left",
+                       headers=["Timing", "Value"]))
+        print("End of execution.")
     return 0
 
 if __name__ == '__main__':
