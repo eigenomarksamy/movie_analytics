@@ -95,7 +95,7 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
         "Already processed": f'{proc_list_size * 100 / total_list_size:.2f}%',
         "Expected progress":
             f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
-        "Expected time": convert_duration_to_str(exp_proc_time),
+        "Expected time": convert_duration_to_str(15 * batch_files_count),
         "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
         "Expected remaining list count":
             f'{rem_list_count - batch_files_count}',
