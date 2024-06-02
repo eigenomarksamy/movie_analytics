@@ -135,22 +135,22 @@ def main(args: argparse.Namespace) -> int:
     csv_raw = []
     if verbose:
         display_initial_info(exp_proc_time=expected_total_processing_time,
-                            batch_files_count=working_list_count,
-                            batch_size=total_size_gb, proc_speed=proc_speed,
-                            rem_list_count=len(remaining_list),
-                            total_list_count=len(total_list),
-                            total_list_size=total_list_size,
-                            rem_list_size=remaining_list_size,
-                            proc_list_size=processed_list_size,
-                            destination=dest_dir, project=proj_name,
-                            allowed_exec_time=(max_size_batch / proc_speed),
-                            out_dir_csv=cache_obj.csv_clean_file,
-                            out_dir_csv_raw=cache_obj.csv_raw_file,
-                            out_dir_summary_wip=cache_obj.summary_file,
-                            out_dir_summary_tmp=cache_obj.tmp_summary_file,
-                            out_dir_summary_final=cache_obj.full_summary_file,
-                            out_dir_list_full=cache_obj.file_list_full_file,
-                            out_dir_list_proc=cache_obj.file_list_processed_file)
+                             batch_files_count=working_list_count,
+                             batch_size=total_size_gb, proc_speed=proc_speed,
+                             rem_list_count=len(remaining_list),
+                             total_list_count=len(total_list),
+                             total_list_size=total_list_size,
+                             rem_list_size=remaining_list_size,
+                             proc_list_size=processed_list_size,
+                             destination=dest_dir, project=proj_name,
+                             allowed_exec_time=(max_size_batch / proc_speed),
+                             out_dir_csv=cache_obj.csv_clean_file,
+                             out_dir_csv_raw=cache_obj.csv_raw_file,
+                             out_dir_summary_wip=cache_obj.summary_file,
+                             out_dir_summary_tmp=cache_obj.tmp_summary_file,
+                             out_dir_summary_final=cache_obj.full_summary_file,
+                             out_dir_list_full=cache_obj.file_list_full_file,
+                             out_dir_list_proc=cache_obj.file_list_processed_file)
         print("Progress")
     initialization_time_end = time.time()
     initialization_time_taken = initialization_time_end - initialization_time_start
@@ -160,10 +160,10 @@ def main(args: argparse.Namespace) -> int:
         try:
             mp4_file = get_video_info(f'{file}')
             summary_obj.step(file.split(separator)[-1], mp4_file['encoding'],
-                            mp4_file['size'] / (1024 ** 2),
-                            mp4_file['duration'] / 60,
-                            mp4_file['creation_time'],
-                            mp4_file['time_taken'])
+                             mp4_file['size'] / (1024 ** 2),
+                             mp4_file['duration'] / 60,
+                             mp4_file['creation_time'],
+                             mp4_file['time_taken'])
             if verbose:
                 display_progress(working_list_count, summary_obj.count_files,
                                 total_size_gb, summary_obj.total_size_gb)
@@ -221,7 +221,7 @@ def main(args: argparse.Namespace) -> int:
                     f'{finalization_time_taken:.2f} secs',
                  "Total execution":
                     convert_duration_to_str(total_time),
-                 "Total execution per item":
+                 "Average execution per item":
                     convert_duration_to_str(total_time / len(step_times))}
         print(tabulate(table.items(), tablefmt="pretty", stralign="left",
                        headers=["Timing", "Value"]))
