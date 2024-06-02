@@ -60,7 +60,7 @@ def display_progress(total_count: int,
           f"{processed_count}/{total_count}\t\t"
           f"{processed_size:.2f}/{total_size:.2f} GB\t\t"
           f"{(processed_size*100)/total_size:.2f}%\t\t"
-          f"{convert_duration_to_str((total_count - processed_count) * 15)}")
+          f"~{convert_duration_to_str((total_count - processed_count) * 15)}")
 
 def display_initial_info(exp_proc_time: float, batch_files_count: int,
                          batch_size: float, proc_speed: float,
@@ -173,8 +173,9 @@ def main(args: argparse.Namespace) -> int:
                 "size": convert_size_to_str(mp4_file['size']),
                 "duration": convert_duration_to_str(mp4_file['duration']),
                 "creation date": mp4_file['creation_time'],
-                "resolution": convert_resolution_to_str(mp4_file['resolution_width'],
-                                                        mp4_file['resolution_height']),
+                "resolution": convert_resolution_to_str(
+                    mp4_file['resolution_width'],
+                    mp4_file['resolution_height']),
                 "processing time": mp4_file['time_taken']
             })
             csv_raw.append({
@@ -214,7 +215,8 @@ def main(args: argparse.Namespace) -> int:
         table = {"Initialization":
                     f'{initialization_time_taken:.2f} secs',
                  "Steps total / steps length":
-                    f'{convert_duration_to_str(sum(step_times))} / {len(step_times)}',
+                    f'{convert_duration_to_str(sum(step_times))} / '
+                    f'{len(step_times)}',
                  "Step average":
                     convert_duration_to_str(step_time_avg),
                  "Finalization":
