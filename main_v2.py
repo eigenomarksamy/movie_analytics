@@ -59,7 +59,8 @@ def display_progress(total_count: int,
     print(f"{''.join(progress_bar)}\t\t"
           f"{processed_count}/{total_count}\t\t"
           f"{processed_size:.2f}/{total_size:.2f} GB\t\t"
-          f"{(processed_size*100)/total_size:.2f}%")
+          f"{(processed_size*100)/total_size:.2f}%\t\t"
+          f"{convert_duration_to_str((total_count - processed_count) * 15)}")
 
 def display_initial_info(exp_proc_time: float, batch_files_count: int,
                          batch_size: float, proc_speed: float,
