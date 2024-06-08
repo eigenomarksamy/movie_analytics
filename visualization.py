@@ -84,6 +84,9 @@ def main(args: argparse.Namespace) -> int:
             'resolution': {
                 'total': sum_month_data_res[month_label]['total_resolution'],
                 'average': sum_month_data_res[month_label]['average_resolution']
+            },
+            'num': {
+                'total': len(grouped_data[month_label])
             }
         }
     months = list(analyzed_months.keys())
@@ -93,7 +96,8 @@ def main(args: argparse.Namespace) -> int:
     average_size = [analyzed_months[month]['size']['average'] for month in months]
     total_resolution = [analyzed_months[month]['resolution']['total'] for month in months]
     average_resolution = [analyzed_months[month]['resolution']['average'] for month in months]
-    _, axes = plt.subplots(3, 2, figsize=(15, 15))
+    num_files = [analyzed_months[month]['num']['total'] for month in months]
+    fig, axes = plt.subplots(4, 2, figsize=(15, 20))
     axes[0, 0].plot(months, total_duration, marker='o', label='Total Duration')
     axes[0, 0].set_title('Total Duration per Month')
     axes[0, 0].set_xlabel('Month')
@@ -130,6 +134,13 @@ def main(args: argparse.Namespace) -> int:
     axes[2, 1].set_ylabel('Average Resolution')
     axes[2, 1].legend()
     axes[2, 1].grid(True)
+    axes[3, 0].plot(months, num_files, marker='o', label='Number of Files')
+    axes[3, 0].set_title('Number of Files per Month')
+    axes[3, 0].set_xlabel('Month')
+    axes[3, 0].set_ylabel('Number of Files')
+    axes[3, 0].legend()
+    axes[3, 0].grid(True)
+    fig.delaxes(axes[3, 1])
     plt.tight_layout()
     plt.savefig('cache/' + args.proj_name + '/out/monthly_data_analysis.jpg', format='jpg')
 
