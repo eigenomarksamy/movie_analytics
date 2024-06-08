@@ -2,6 +2,7 @@ import sys
 import argparse
 from datetime import datetime
 from collections import defaultdict
+from tabulate import tabulate
 import matplotlib.pyplot as plt
 from analytics.utils import read_csv
 
@@ -143,6 +144,21 @@ def main(args: argparse.Namespace) -> int:
     fig.delaxes(axes[3, 1])
     plt.tight_layout()
     plt.savefig('cache/' + args.proj_name + '/out/monthly_data_analysis.jpg', format='jpg')
+    print(f'overall average number of files per month: {sum(num_files) // len(num_files)}')
+    print(f'minimum number of files: {min(num_files)} @ {months.index(num_files.index(min(num_files)) + 1)}')
+    print(f'maximum number of files: {max(num_files)} @ {months.index(num_files.index(max(num_files)) + 1)}')
+    print(f'minimum total duration: {min(total_duration)} @ {months.index(total_duration.index(min(total_duration)) + 1)}')
+    print(f'maximum total duration: {max(total_duration)} @ {months.index(total_duration.index(max(total_duration)) + 1)}')
+    print(f'minimum average duration: {min(average_duration)} @ {months.index(average_duration.index(min(average_duration)) + 1)}')
+    print(f'maximum average duration: {max(average_duration)} @ {months.index(average_duration.index(max(average_duration)) + 1)}')
+    print(f'minimum total size: {min(total_size)} @ {months.index(total_size.index(min(total_size)) + 1)}')
+    print(f'maximum total size: {max(total_size)} @ {months.index(total_size.index(max(total_size)) + 1)}')
+    print(f'minimum average size: {min(average_size)} @ {months.index(average_size.index(min(average_size)) + 1)}')
+    print(f'maximum average size: {max(average_size)} @ {months.index(average_size.index(max(average_size)) + 1)}')
+    print(f'minimum total resolution: {min(total_resolution)} @ {months.index(total_resolution.index(min(total_resolution)) + 1)}')
+    print(f'maximum total resolution: {max(total_resolution)} @ {months.index(total_resolution.index(max(total_resolution)) + 1)}')
+    print(f'minimum average resolution: {min(average_resolution)} @ {months.index(average_resolution.index(min(average_resolution)) + 1)}')
+    print(f'maximum average resolution: {max(average_resolution)} @ {months.index(average_resolution.index(max(average_resolution)) + 1)}')
 
 if __name__ == '__main__':
     sys.exit(main(parse_arguments()))
