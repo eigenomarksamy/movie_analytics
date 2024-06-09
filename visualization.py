@@ -145,22 +145,27 @@ def generate_visualization(path: os.PathLike, csv_file_name: str) -> None:
     fig.delaxes(axes[3, 1])
     plt.tight_layout()
     plt.savefig(f'{path}monthly_data_analysis.jpg', format='jpg')
+    data = [
+    ("minimum number of files", min(num_files), months[num_files.index(min(num_files))]),
+    ("maximum number of files", max(num_files), months[num_files.index(max(num_files))]),
+    ("minimum total duration", min(total_duration), months[total_duration.index(min(total_duration))]),
+    ("maximum total duration", max(total_duration), months[total_duration.index(max(total_duration))]),
+    ("minimum average duration", min(average_duration), months[average_duration.index(min(average_duration))]),
+    ("maximum average duration", max(average_duration), months[average_duration.index(max(average_duration))]),
+    ("minimum total size", min(total_size), months[total_size.index(min(total_size))]),
+    ("maximum total size", max(total_size), months[total_size.index(max(total_size))]),
+    ("minimum average size", min(average_size), months[average_size.index(min(average_size))]),
+    ("maximum average size", max(average_size), months[average_size.index(max(average_size))]),
+    ("minimum total resolution", min(total_resolution), months[total_resolution.index(min(total_resolution))]),
+    ("maximum total resolution", max(total_resolution), months[total_resolution.index(max(total_resolution))]),
+    ("minimum average resolution", min(average_resolution), months[average_resolution.index(min(average_resolution))]),
+    ("maximum average resolution", max(average_resolution), months[average_resolution.index(max(average_resolution))]),
+    ]
+    print("{:<30} {:<10} {:<10}".format("Metric", "Value", "Month"))
+    print("-" * 50)
+    for metric, value, month in data:
+        print("{:<30} {:<10} {:<10}".format(metric, f'{value:.2f}', month))
     print(f'overall average number of files per month: {sum(num_files) // len(num_files)}')
-    print(f'minimum number of files: {min(num_files)} @ {months.index(num_files.index(min(num_files)) + 1)}')
-    print(f'maximum number of files: {max(num_files)} @ {months.index(num_files.index(max(num_files)) + 1)}')
-    print(f'minimum total duration: {min(total_duration)} @ {months.index(total_duration.index(min(total_duration)) + 1)}')
-    print(f'maximum total duration: {max(total_duration)} @ {months.index(total_duration.index(max(total_duration)) + 1)}')
-    print(f'minimum average duration: {min(average_duration)} @ {months.index(average_duration.index(min(average_duration)) + 1)}')
-    print(f'maximum average duration: {max(average_duration)} @ {months.index(average_duration.index(max(average_duration)) + 1)}')
-    print(f'minimum total size: {min(total_size)} @ {months.index(total_size.index(min(total_size)) + 1)}')
-    print(f'maximum total size: {max(total_size)} @ {months.index(total_size.index(max(total_size)) + 1)}')
-    print(f'minimum average size: {min(average_size)} @ {months.index(average_size.index(min(average_size)) + 1)}')
-    print(f'maximum average size: {max(average_size)} @ {months.index(average_size.index(max(average_size)) + 1)}')
-    print(f'minimum total resolution: {min(total_resolution)} @ {months.index(total_resolution.index(min(total_resolution)) + 1)}')
-    print(f'maximum total resolution: {max(total_resolution)} @ {months.index(total_resolution.index(max(total_resolution)) + 1)}')
-    print(f'minimum average resolution: {min(average_resolution)} @ {months.index(average_resolution.index(min(average_resolution)) + 1)}')
-    print(f'maximum average resolution: {max(average_resolution)} @ {months.index(average_resolution.index(max(average_resolution)) + 1)}')
-
 
 def main(args: argparse.Namespace) -> int:
     generate_visualization('cache/' + args.proj_name + '/out/', 'files_raw.csv')
