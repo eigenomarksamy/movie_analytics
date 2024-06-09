@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 from datetime import datetime
@@ -64,8 +65,8 @@ def sum_and_average_resolutions_by_month(grouped_data: dict) -> dict:
         }
     return sum_month_data
 
-def main(args: argparse.Namespace) -> int:
-    csv_file = 'cache/' + args.proj_name + '/out/files_raw.csv'
+def generate_visualization(path: os.PathLike, csv_file_name: str) -> None:
+    csv_file = path + csv_file_name
     data_dict = read_csv(csv_file)
     grouped_data = group_data_by_month(data_dict)
     sum_month_data_dur = sum_and_average_durations_by_month(grouped_data)
@@ -143,7 +144,7 @@ def main(args: argparse.Namespace) -> int:
     axes[3, 0].grid(True)
     fig.delaxes(axes[3, 1])
     plt.tight_layout()
-    plt.savefig('cache/' + args.proj_name + '/out/monthly_data_analysis.jpg', format='jpg')
+    plt.savefig(f'{path}monthly_data_analysis.jpg', format='jpg')
     print(f'overall average number of files per month: {sum(num_files) // len(num_files)}')
     print(f'minimum number of files: {min(num_files)} @ {months.index(num_files.index(min(num_files)) + 1)}')
     print(f'maximum number of files: {max(num_files)} @ {months.index(num_files.index(max(num_files)) + 1)}')
@@ -159,6 +160,10 @@ def main(args: argparse.Namespace) -> int:
     print(f'maximum total resolution: {max(total_resolution)} @ {months.index(total_resolution.index(max(total_resolution)) + 1)}')
     print(f'minimum average resolution: {min(average_resolution)} @ {months.index(average_resolution.index(min(average_resolution)) + 1)}')
     print(f'maximum average resolution: {max(average_resolution)} @ {months.index(average_resolution.index(max(average_resolution)) + 1)}')
+
+
+def main(args: argparse.Namespace) -> int:
+    generate_visualization('cache/' + args.proj_name + '/out/', 'files_raw.csv')
 
 if __name__ == '__main__':
     sys.exit(main(parse_arguments()))

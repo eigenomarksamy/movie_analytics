@@ -15,6 +15,7 @@ from analytics.utils import (get_total_size_gb,
                              convert_size_to_str,
                              convert_resolution_to_str,
                              convert_size_mb_to_str)
+from visualization import generate_visualization
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Create movie info')
@@ -124,6 +125,8 @@ def main(args: argparse.Namespace) -> int:
         raw_csv_data = cache_obj.read_raw_csv_file()
         full_summary = summary_obj.generate_full_summary(raw_csv_data)
         cache_obj.write_full_summary_file(full_summary)
+        path_name, file_name = os.path.split(cache_obj.csv_raw_file)
+        generate_visualization(path_name + '/', file_name)
         return 0
     working_list = dir_mgr_obj.get_working_batch_list_files(remaining_list,
                                                             max_size_batch)
