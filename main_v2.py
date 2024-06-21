@@ -16,14 +16,13 @@ from analytics.utils import (get_total_size_gb,
                              convert_resolution_to_str,
                              convert_size_mb_to_str)
 from visualization import generate_visualization
+from ui import get_user_inputs
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Create movie info')
-    parser.add_argument('--dest', type=str,
-                        dest='input_directory',
+    parser.add_argument('--dest', type=str, dest='input_directory',
                         help='Input directory path')
-    parser.add_argument('--proj', type=str, default="",
-                        dest='proj_name',
+    parser.add_argument('--proj', type=str, default="", dest='proj_name',
                         help='Input project name')
     parser.add_argument('--proc-speed', type=float, default=0.1,
                         dest='proc_speed',
@@ -31,24 +30,41 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--exec-time', type=float, default=60,
                         dest='max_exec_time',
                         help='Allowed time to execute (s)')
-    parser.add_argument('--quite', '-q', action='store_true',
-                        dest='quite',
+    parser.add_argument('--quiet', '-q', action='store_true', dest='quiet',
                         help='Hide detailed output')
+    parser.add_argument('--ui', action='store_true', dest='use_ui',
+                        help='Use the UI')
     return parser.parse_args()
 
 def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
                                                     str, float, float]:
-    dest_dir = args.input_directory
-    proj_name = args.proj_name
-    separator = '\\' if sys.platform == 'win32' else '/'
-    if proj_name == "":
-        proj_name = dest_dir.replace(separator, '_')
-    if dest_dir[-1] != separator:
-        dest_dir += separator
-    max_size_batch = args.proc_speed * (args.max_exec_time - 10)
-    verbose = not args.quite
-    return dest_dir, proj_name, separator, max_size_batch, \
-            args.proc_speed, verbose
+    def prepare_values(dest_dir, proj_name, proc_speed, max_exec_time, quiet_mode):
+        separator = '/'
+        if dest_dir.find('\\') != -1:
+            separator = '\\'
+        if proj_name == "":
+            proj_name = dest_dir.replace(separator, '_')
+        if dest_dir[-1] != separator:
+            dest_dir += separator
+        max_size_batch = proc_speed * (max_exec_time - 10)
+        verbose = not quiet_mode
+        return dest_dir, proj_name, separator, max_size_batch, proc_speed, verbose
+
+    if args.use_ui:
+        user_inputs = get_user_inputs()
+        dest_dir = user_inputs['destination']
+        proj_name = user_inputs['project_name']
+        proc_speed = user_inputs['proc_speed']
+        exec_time = user_inputs['exec_time']
+        quiet_mode = user_inputs['quiet_mode']
+    else:
+        dest_dir = args.input_directory
+        proj_name = args.proj_name
+        proc_speed = args.proc_speed
+        exec_time = args.max_exec_time
+        quiet_mode = args.quiet
+
+    return prepare_values(dest_dir, proj_name, proc_speed, exec_time, quiet_mode)
 
 def display_progress(total_count: int,
                      processed_count: int,
@@ -108,11 +124,10 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
                    headers=["Information", "Value"]))
     print("Execution initiated.")
 
-def main(args: argparse.Namespace) -> int:
+def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
+         max_size_batch: float, proc_speed: float, verbose: bool) -> int:
     start_time = time.time()
     initialization_time_start = time.time()
-    dest_dir, proj_name, separator, max_size_batch, \
-        proc_speed, verbose = process_args(args)
     cache_obj = CacheRW(proj_name, verbose)
     dir_mgr_obj = DirectoryMgr(dest_dir, cache_obj)
     summary_obj = Summary()
@@ -232,6 +247,12 @@ def main(args: argparse.Namespace) -> int:
                        headers=["Timing", "Value"]))
         print("End of execution.")
     return 0
+
+def main(args: argparse.Namespace) -> int:
+    dest_dir, proj_name, separator, max_size_batch, \
+        proc_speed, verbose = process_args(args)
+    return exec(dest_dir, proj_name, separator,
+                max_size_batch, proc_speed, verbose)
 
 if __name__ == '__main__':
     sys.exit(main(parse_arguments()))

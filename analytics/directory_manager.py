@@ -27,7 +27,12 @@ class DirectoryMgr:
         return total_size
 
     def get_remaining_list_files(self) -> list[os.PathLike]:
-        self.processed_list = self.cache_obj.read_processed_list()
+        # self.processed_list = self.cache_obj.read_processed_list()
+        proc_list = []
+        proc_dict_list = self.cache_obj.read_raw_csv_file()
+        for proc in proc_dict_list:
+            proc_list.append(self.directory + proc['file'])
+        self.processed_list = proc_list
         self.remaining_files = []
         if self.processed_list:
             for file in self.all_files:

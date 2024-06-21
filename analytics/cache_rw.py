@@ -4,22 +4,32 @@ from analytics.utils import (write_file, update_csv, extract_info_from_file,
 
 class CacheRW:
 
-    def __init__(self, proj_name: str, verbose: bool = True) -> None:
+    def __init__(self, proj_name: str, verbose: bool = True, **kwargs) -> None:
         self.project_exists = False
-        self.proj_cache_dir = 'cache/' + proj_name + '/'
+        self.proj_cache_dir = kwargs.get('proj_cache_dir', 'cache/' + proj_name + '/')
         if os.path.exists(self.proj_cache_dir):
             self.project_exists = True
         self._verbose = verbose
-        self.report_dir = self.proj_cache_dir + 'out/'
-        self.csv_clean_file = self.report_dir + 'files.csv'
-        self.csv_raw_file = self.report_dir + 'files_raw.csv'
-        self.summary_file = self.report_dir + 'summary.txt'
-        self.full_summary_file = self.report_dir + 'full_summary.txt'
-        self.tmp_summary_file = self.report_dir + 'partial_summary.txt'
-        self.file_lists_dir = self.proj_cache_dir + 'working_file_lists/'
-        self.file_list_full_file = self.file_lists_dir + 'full_file_list.txt'
-        self.file_list_processed_file = self.file_lists_dir + 'processed_file_list.txt'
-        self.destination_file = self.proj_cache_dir + 'destination.txt'
+        self.report_dir = kwargs.get('report_dir',
+                                     self.proj_cache_dir + 'out/')
+        self.csv_clean_file = kwargs.get('csv_clean_file',
+                                         self.report_dir + 'files.csv')
+        self.csv_raw_file = kwargs.get('csv_raw_file',
+                                       self.report_dir + 'files_raw.csv')
+        self.summary_file = kwargs.get('summary_file',
+                                       self.report_dir + 'summary.txt')
+        self.full_summary_file = kwargs.get('full_summary_file',
+                                            self.report_dir + 'full_summary.txt')
+        self.tmp_summary_file = kwargs.get('tmp_summary_file',
+                                           self.report_dir + 'partial_summary.txt')
+        self.file_lists_dir = kwargs.get('file_lists_dir',
+                                         self.proj_cache_dir + 'working_file_lists/')
+        self.file_list_full_file = kwargs.get('file_list_full_file',
+                                              self.file_lists_dir + 'full_file_list.txt')
+        self.file_list_processed_file = kwargs.get('file_list_processed_file',
+                                                   self.file_lists_dir + 'processed_file_list.txt')
+        self.destination_file = kwargs.get('destination_file',
+                                           self.proj_cache_dir + 'destination.txt')
         self.make_dirs()
 
     def make_dirs(self):
