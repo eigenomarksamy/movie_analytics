@@ -88,7 +88,7 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
                          out_dir_csv: str, out_dir_csv_raw: str,
                          out_dir_summary_wip: str, out_dir_summary_tmp: str,
                          out_dir_summary_final: str, out_dir_list_full: str,
-                         out_dir_list_proc: str) -> None:
+                         out_dir_list_proc: str, out_dir_visualization: str) -> None:
     print("Initialization done.")
     table = {
         "Destination": destination,
@@ -98,6 +98,7 @@ def display_initial_info(exp_proc_time: float, batch_files_count: int,
         "Summary (wip)": out_dir_summary_wip,
         "Temporary summary": out_dir_summary_tmp,
         "Final summary": out_dir_summary_final,
+        "Analytics graphs": out_dir_visualization,
         "Full list": out_dir_list_full,
         "Processed list": out_dir_list_proc,
         "Processing speed": proc_speed,
@@ -168,7 +169,8 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
                              out_dir_summary_tmp=cache_obj.tmp_summary_file,
                              out_dir_summary_final=cache_obj.full_summary_file,
                              out_dir_list_full=cache_obj.file_list_full_file,
-                             out_dir_list_proc=cache_obj.file_list_processed_file)
+                             out_dir_list_proc=cache_obj.file_list_processed_file,
+                             out_dir_visualization=cache_obj.out_dir_visualization)
         print("Progress")
     initialization_time_end = time.time()
     initialization_time_taken = initialization_time_end - initialization_time_start

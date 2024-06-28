@@ -28,6 +28,8 @@ class CacheRW:
                                               self.file_lists_dir + 'full_file_list.txt')
         self.file_list_processed_file = kwargs.get('file_list_processed_file',
                                                    self.file_lists_dir + 'processed_file_list.txt')
+        self.out_dir_visualization = kwargs.get('visualization',
+                                                self.report_dir + 'monthly_data_analysis.jpg')
         self.destination_file = kwargs.get('destination_file',
                                            self.proj_cache_dir + 'destination.txt')
         self.make_dirs()
