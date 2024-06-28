@@ -50,8 +50,15 @@ def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
         verbose = not quiet_mode
         return dest_dir, proj_name, separator, max_size_batch, proc_speed, verbose
 
+    defaults_dict = {
+        'dest_dir': str(args.input_directory),
+        'proc_speed': str(args.proc_speed),
+        'exec_time': str(int(args.max_exec_time)),
+        'proj_name': str(args.proj_name)
+    }
+
     if args.use_ui:
-        user_inputs = get_user_inputs()
+        user_inputs = get_user_inputs(defaults_dict)
         dest_dir = user_inputs['destination']
         proj_name = user_inputs['project_name']
         proc_speed = user_inputs['proc_speed']

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-def get_user_inputs() -> dict:
+def get_user_inputs(defaults_dict: dict = None) -> dict:
 
     def submit():
         nonlocal user_inputs
@@ -40,6 +40,15 @@ def get_user_inputs() -> dict:
     default_proc_speed = "0.1"
     default_exec_time = "60"
     default_destination = ""
+    if defaults_dict:
+        if 'proj_name' in defaults_dict:
+            default_project_name = defaults_dict['proj_name']
+        if 'proc_speed' in defaults_dict:
+            default_proc_speed = defaults_dict['proc_speed']
+        if 'exec_time' in defaults_dict:
+            default_exec_time = defaults_dict['exec_time']
+        if 'dest_dir' in defaults_dict:
+            default_destination = defaults_dict['dest_dir']
     tk.Label(root, text="Project Name:").grid(row=0, column=0, padx=10, pady=5)
     entry_project_name = tk.Entry(root)
     entry_project_name.insert(0, default_project_name)
