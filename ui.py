@@ -64,3 +64,31 @@ def get_user_inputs() -> dict:
     root.mainloop()
 
     return user_inputs
+
+## window: progress
+def display_progress():
+    def display_initial_info():
+        pass
+    def display_progress_bar():
+        pass
+    def display_processed_size():
+        pass
+    def display_estimated_time_left():
+        pass
+    def display_count_files():
+        pass
+    def display_current_file():
+        pass
+    pass
+
+## window: on exit
+def display_summary():
+    def display_run_summary():
+        pass
+    def display_total_summary():
+        pass
+    def display_timetable():
+        pass
+    def display_out_locations():
+        pass
+    pass
