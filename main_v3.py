@@ -5,7 +5,8 @@ import math
 import time
 import argparse
 from typing import Tuple
-from tabulate import tabulate
+import queue
+import threading
 from analytics.summary import Summary
 from analytics.cache_rw import CacheRW
 from analytics.directory_manager import DirectoryMgr
@@ -16,7 +17,8 @@ from analytics.utils import (get_total_size_gb,
                              convert_resolution_to_str,
                              convert_size_mb_to_str)
 from visualization import generate_visualization
-from ui import get_user_inputs
+from ui import get_user_inputs, show_progress_window
+from cli_displayers import display_progress, display_table
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Create movie info')
@@ -48,14 +50,18 @@ def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
             dest_dir += separator
         max_size_batch = proc_speed * (max_exec_time - 10)
         verbose = not quiet_mode
-        return dest_dir, proj_name, separator, max_size_batch, proc_speed, verbose
+        return dest_dir, proj_name, separator, max_size_batch, proc_speed, verbose, args.use_ui
 
-    defaults_dict = {
-        'dest_dir': str(args.input_directory),
-        'proc_speed': str(args.proc_speed),
-        'exec_time': str(int(args.max_exec_time)),
-        'proj_name': str(args.proj_name)
-    }
+    defaults_dict = {}
+
+    if args.input_directory:
+        defaults_dict['dest_dir'] = str(args.input_directory)
+
+    if args.proj_name:
+        defaults_dict['proj_name'] = str(args.proj_name)
+
+    defaults_dict['proc_speed'] = str(args.proc_speed)
+    defaults_dict['exec_time'] = str(int(args.max_exec_time))
 
     if args.use_ui:
         user_inputs = get_user_inputs(defaults_dict)
@@ -67,73 +73,16 @@ def process_args(args: argparse.Namespace) -> Tuple[os.PathLike, str,
     else:
         dest_dir = args.input_directory
         proj_name = args.proj_name
-        proc_speed = args.proc_speed
-        exec_time = args.max_exec_time
+        proc_speed = float(defaults_dict['proc_speed'])
+        exec_time = int(defaults_dict['exec_time'])
         quiet_mode = args.quiet
 
-    return prepare_values(dest_dir, proj_name, proc_speed, exec_time, quiet_mode)
-
-def display_progress(total_count: int,
-                     processed_count: int,
-                     total_size: float,
-                     processed_size: float) -> None:
-    progress_bar = ['-'] * 100
-    for i in range(int(processed_count * 100 / total_count)):
-        progress_bar[i] = '+'
-    print(f"{''.join(progress_bar)}\t\t"
-          f"{processed_count}/{total_count}\t\t"
-          f"{processed_size:.2f}/{total_size:.2f} GB\t\t"
-          f"{(processed_size*100)/total_size:.2f}%\t\t"
-          f"~{convert_duration_to_str((total_count - processed_count) * 15)}")
-
-def display_initial_info(exp_proc_time: float, batch_files_count: int,
-                         batch_size: float, proc_speed: float,
-                         rem_list_count: int, total_list_count: int,
-                         total_list_size: float, rem_list_size: float,
-                         proc_list_size: float, destination: str,
-                         project: str, allowed_exec_time: float,
-                         out_dir_csv: str, out_dir_csv_raw: str,
-                         out_dir_summary_wip: str, out_dir_summary_tmp: str,
-                         out_dir_summary_final: str, out_dir_list_full: str,
-                         out_dir_list_proc: str, out_dir_visualization: str) -> None:
-    print("Initialization done.")
-    table = {
-        "Destination": destination,
-        "Project": project,
-        "Files csv": out_dir_csv,
-        "Files csv (raw)": out_dir_csv_raw,
-        "Summary (wip)": out_dir_summary_wip,
-        "Temporary summary": out_dir_summary_tmp,
-        "Final summary": out_dir_summary_final,
-        "Analytics graphs": out_dir_visualization,
-        "Full list": out_dir_list_full,
-        "Processed list": out_dir_list_proc,
-        "Processing speed": proc_speed,
-        "Allowed execution time": allowed_exec_time,
-        "Number of total files": total_list_count,
-        "Number of processed files": total_list_count - rem_list_count,
-        "Number of remaining files": rem_list_count,
-        "Number of batch files": batch_files_count,
-        "Total size": f'{total_list_size:.2f} GB',
-        "Batch size": convert_size_mb_to_str(batch_size * 1024),
-        "Remaining list size (incl batch)": f'{rem_list_size:.2f} GB',
-        "Processed list size": f'{proc_list_size:.2f} GB',
-        "Already processed": f'{proc_list_size * 100 / total_list_size:.2f}%',
-        "Expected progress":
-            f'{(proc_list_size + batch_size) * 100 / total_list_size:.2f}%',
-        "Expected time": convert_duration_to_str(15 * batch_files_count),
-        "Expected remaining list size": f'{rem_list_size - batch_size:.2f} GB',
-        "Expected remaining list count":
-            f'{rem_list_count - batch_files_count}',
-        "Expected remaining runs (at this proc speed)":
-            math.ceil(rem_list_size / batch_size)
-        }
-    print(tabulate(table.items(), tablefmt="pretty", stralign="left",
-                   headers=["Information", "Value"]))
-    print("Execution initiated.")
+    return prepare_values(dest_dir, proj_name, proc_speed,
+                          exec_time, quiet_mode)
 
 def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
-         max_size_batch: float, proc_speed: float, verbose: bool) -> int:
+         max_size_batch: float, proc_speed: float,
+         verbose: bool, use_ui: bool) -> int:
     start_time = time.time()
     initialization_time_start = time.time()
     cache_obj = CacheRW(proj_name, verbose)
@@ -159,25 +108,46 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
     expected_total_processing_time = total_size_gb / proc_speed
     csv_dict = []
     csv_raw = []
+    progress_queue = queue.Queue()
+    initial_table = {
+        "Destination": dest_dir,
+        "Project": proj_name,
+        "Files csv": cache_obj.csv_clean_file,
+        "Files csv (raw)": cache_obj.csv_raw_file,
+        "Summary (wip)": cache_obj.summary_file,
+        "Temporary summary": cache_obj.tmp_summary_file,
+        "Final summary": cache_obj.full_summary_file,
+        "Analytics graphs": cache_obj.out_dir_visualization,
+        "Full list": cache_obj.file_list_full_file,
+        "Processed list": cache_obj.file_list_processed_file,
+        "Processing speed": proc_speed,
+        "Allowed execution time": (max_size_batch / proc_speed),
+        "Number of total files": len(total_list),
+        "Number of processed files": len(total_list) - len(remaining_list),
+        "Number of remaining files": len(remaining_list),
+        "Number of batch files": working_list_count,
+        "Total size": f'{total_list_size:.2f} GB',
+        "Batch size": convert_size_mb_to_str(total_size_gb * 1024),
+        "Remaining list size (incl batch)": f'{remaining_list_size:.2f} GB',
+        "Processed list size": f'{processed_list_size:.2f} GB',
+        "Already processed": f'{processed_list_size * 100 / total_list_size:.2f}%',
+        "Expected progress":
+            f'{(processed_list_size + total_size_gb) * 100 / total_list_size:.2f}%',
+        "Expected time": convert_duration_to_str(20 * working_list_count),
+        "Expected remaining list size": f'{remaining_list_size - total_size_gb:.2f} GB',
+        "Expected remaining list count":
+            f'{len(remaining_list) - working_list_count}',
+        "Expected remaining runs (at this proc speed)":
+            math.ceil(remaining_list_size / total_size_gb)
+    }
+    if use_ui:
+        ui_thread = threading.Thread(target=show_progress_window,
+                                     args=(initial_table, progress_queue))
+        ui_thread.start()
     if verbose:
-        display_initial_info(exp_proc_time=expected_total_processing_time,
-                             batch_files_count=working_list_count,
-                             batch_size=total_size_gb, proc_speed=proc_speed,
-                             rem_list_count=len(remaining_list),
-                             total_list_count=len(total_list),
-                             total_list_size=total_list_size,
-                             rem_list_size=remaining_list_size,
-                             proc_list_size=processed_list_size,
-                             destination=dest_dir, project=proj_name,
-                             allowed_exec_time=(max_size_batch / proc_speed),
-                             out_dir_csv=cache_obj.csv_clean_file,
-                             out_dir_csv_raw=cache_obj.csv_raw_file,
-                             out_dir_summary_wip=cache_obj.summary_file,
-                             out_dir_summary_tmp=cache_obj.tmp_summary_file,
-                             out_dir_summary_final=cache_obj.full_summary_file,
-                             out_dir_list_full=cache_obj.file_list_full_file,
-                             out_dir_list_proc=cache_obj.file_list_processed_file,
-                             out_dir_visualization=cache_obj.out_dir_visualization)
+        print("Initialization done.")
+        display_table(table=initial_table, headers=["Information", "Value"])
+        print("Execution initiated.")
         print("Progress")
     initialization_time_end = time.time()
     initialization_time_taken = initialization_time_end - initialization_time_start
@@ -191,9 +161,17 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
                              mp4_file['duration'] / 60,
                              mp4_file['creation_time'],
                              mp4_file['time_taken'])
+            progress_text = (f"{summary_obj.count_files}/{working_list_count}\t\t"
+                             f"{summary_obj.total_size_gb:.2f}/{total_size_gb:.2f} GB\t\t"
+                             f"{(summary_obj.total_size_gb*100)/total_size_gb:.2f}%\t\t"
+                             f"~{convert_duration_to_str((working_list_count - summary_obj.count_files) * 20)}")
+            if use_ui:
+                progress_queue.put((int((summary_obj.count_files / working_list_count) * 100),
+                                    progress_text))
             if verbose:
-                display_progress(working_list_count, summary_obj.count_files,
-                                total_size_gb, summary_obj.total_size_gb)
+                display_progress(working_list_count,
+                                 summary_obj.count_files,
+                                 progress_text)
             csv_dict.append({
                 "file": file.split(separator)[-1],
                 "encoding": mp4_file['encoding'],
@@ -238,30 +216,34 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
     finalization_time_taken = finalization_time_end - finalization_time_start
     end_time = time.time()
     total_time = end_time - start_time
+    timetable = {
+        "Initialization":
+            f'{initialization_time_taken:.2f} secs',
+            "Steps total / steps length":
+            f'{convert_duration_to_str(sum(step_times))} / '
+            f'{len(step_times)}',
+            "Step average":
+            convert_duration_to_str(step_time_avg),
+            "Finalization":
+            f'{finalization_time_taken:.2f} secs',
+            "Total execution":
+            convert_duration_to_str(total_time),
+            "Average execution per item":
+            convert_duration_to_str(total_time / len(step_times))
+    }
+    if use_ui:
+        progress_queue.put((100, str(timetable)))
     if verbose:
-        table = {"Initialization":
-                    f'{initialization_time_taken:.2f} secs',
-                 "Steps total / steps length":
-                    f'{convert_duration_to_str(sum(step_times))} / '
-                    f'{len(step_times)}',
-                 "Step average":
-                    convert_duration_to_str(step_time_avg),
-                 "Finalization":
-                    f'{finalization_time_taken:.2f} secs',
-                 "Total execution":
-                    convert_duration_to_str(total_time),
-                 "Average execution per item":
-                    convert_duration_to_str(total_time / len(step_times))}
-        print(tabulate(table.items(), tablefmt="pretty", stralign="left",
-                       headers=["Timing", "Value"]))
+        display_table(table=timetable, headers=["Timing", "Value"])
         print("End of execution.")
+    progress_queue.put(None)
     return 0
 
 def main(args: argparse.Namespace) -> int:
     dest_dir, proj_name, separator, max_size_batch, \
-        proc_speed, verbose = process_args(args)
+        proc_speed, verbose, use_ui = process_args(args)
     return exec(dest_dir, proj_name, separator,
-                max_size_batch, proc_speed, verbose)
+                max_size_batch, proc_speed, verbose, use_ui)
 
 if __name__ == '__main__':
     sys.exit(main(parse_arguments()))

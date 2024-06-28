@@ -1,5 +1,10 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
+import time
+import threading
+import math
+from tabulate import tabulate
+import queue
 
 def get_user_inputs(defaults_dict: dict = None) -> dict:
 
@@ -48,7 +53,8 @@ def get_user_inputs(defaults_dict: dict = None) -> dict:
         if 'exec_time' in defaults_dict:
             default_exec_time = defaults_dict['exec_time']
         if 'dest_dir' in defaults_dict:
-            default_destination = defaults_dict['dest_dir']
+            # if "None" != defaults_dict['dest_dir']:
+                default_destination = defaults_dict['dest_dir']
     tk.Label(root, text="Project Name:").grid(row=0, column=0, padx=10, pady=5)
     entry_project_name = tk.Entry(root)
     entry_project_name.insert(0, default_project_name)
@@ -74,30 +80,31 @@ def get_user_inputs(defaults_dict: dict = None) -> dict:
 
     return user_inputs
 
-## window: progress
-def display_progress():
-    def display_initial_info():
-        pass
-    def display_progress_bar():
-        pass
-    def display_processed_size():
-        pass
-    def display_estimated_time_left():
-        pass
-    def display_count_files():
-        pass
-    def display_current_file():
-        pass
-    pass
-
-## window: on exit
-def display_summary():
-    def display_run_summary():
-        pass
-    def display_total_summary():
-        pass
-    def display_timetable():
-        pass
-    def display_out_locations():
-        pass
-    pass
+def show_progress_window(initial_table: dict,
+                         progress_queue: queue.Queue) -> None:
+    root = tk.Tk()
+    root.title("Processing Progress")
+    progress_bar = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
+    progress_bar.pack(pady=20)
+    progress_label = tk.Label(root, text="0/0 files processed, 0.00/0.00 GB processed")
+    progress_label.pack(pady=10)
+    text_info = tk.Text(root, height=40, width=200)
+    text_info.pack(pady=10)
+    initial_info = tabulate(initial_table.items(), tablefmt="pretty",
+                            stralign="left", headers=["Information", "Value"])
+    text_info.insert(tk.END, initial_info + "\n")
+    threading.Thread(target=update_progress_in_gui, args=(progress_queue,
+                                                          progress_bar,
+                                                          progress_label)).start()
+    root.mainloop()
+    
+def update_progress_in_gui(progress_queue: queue.Queue,
+                           progress_bar: ttk.Progressbar,
+                           progress_label: tk.Label) -> None:
+    while True:
+        progress = progress_queue.get()
+        if progress is None:
+            break
+        percent, prg_str = progress
+        progress_bar['value'] = percent
+        progress_label.config(text=f"{prg_str}")
