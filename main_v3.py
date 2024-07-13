@@ -210,6 +210,8 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
     raw_csv_data = cache_obj.read_raw_csv_file()
     tmp_summary = summary_obj.generate_full_summary(raw_csv_data)
     cache_obj.write_tmp_summary_file(tmp_summary)
+    # csv_raw_path_name, csv_raw_file_name = os.path.split(cache_obj.csv_raw_file)
+    # generate_visualization(csv_raw_path_name + '/', csv_raw_file_name)
     if verbose:
         print("All output files were generated.")
     finalization_time_end = time.time()

@@ -161,6 +161,7 @@ def generate_visualization(path: os.PathLike, csv_file_name: str) -> None:
     ("minimum average resolution", min(average_resolution), months[average_resolution.index(min(average_resolution))]),
     ("maximum average resolution", max(average_resolution), months[average_resolution.index(max(average_resolution))]),
     ]
+    print(f"number of months: {len(months)}")
     print("{:<30} {:<10} {:<10}".format("Metric", "Value", "Month"))
     print("-" * 50)
     for metric, value, month in data:
