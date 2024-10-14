@@ -54,6 +54,9 @@ class DirectoryMgr:
             total_size +=  (os.path.getsize(file) / (1024 ** 3))
         return total_size
 
+    def remove_deleted_files(self) -> None:
+        pass
+
     def get_working_batch_list_files(self, remaining_list: list[os.PathLike],
                                     size_threshold_gb: float) -> list[os.PathLike]:
         if len(remaining_list) <= 1:

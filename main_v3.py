@@ -3,22 +3,22 @@ import gc
 import sys
 import math
 import time
-import argparse
-from typing import Tuple
 import queue
+import argparse
 import threading
+from typing import Tuple
 from analytics.summary import Summary
 from analytics.cache_rw import CacheRW
 from analytics.directory_manager import DirectoryMgr
 from analytics.mp4_handler import get_video_info
+from visualization import generate_visualization
+from ui import get_user_inputs, show_progress_window
+from cli_displayers import display_progress, display_table
 from analytics.utils import (get_total_size_gb,
                              convert_duration_to_str,
                              convert_size_to_str,
                              convert_resolution_to_str,
                              convert_size_mb_to_str)
-from visualization import generate_visualization
-from ui import get_user_inputs, show_progress_window
-from cli_displayers import display_progress, display_table
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Create movie info')
@@ -132,7 +132,7 @@ def exec(dest_dir: os.PathLike, proj_name: str, separator: str,
         "Processed list size": f'{processed_list_size:.2f} GB',
         "Already processed": f'{processed_list_size * 100 / total_list_size:.2f}%',
         "Expected progress":
-            f'{(processed_list_size + total_size_gb) * 100 / total_list_size:.2f}%',
+            f'{math.floor((processed_list_size + total_size_gb) * 100 / total_list_size)}%',
         "Expected time": convert_duration_to_str(20 * working_list_count),
         "Expected remaining list size": f'{remaining_list_size - total_size_gb:.2f} GB',
         "Expected remaining list count":
